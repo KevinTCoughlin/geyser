@@ -66,7 +66,7 @@ public class JavaDamageEventTranslator extends PacketTranslator<ClientboundDamag
                 default -> null;
             };
 
-            if (sound != null) {
+            if (sound != null && entity == session.getPlayerEntity()) {
                 PlaySoundPacket soundPacket = new PlaySoundPacket();
                 soundPacket.setPosition(entity.getPosition());
                 soundPacket.setSound(sound);
