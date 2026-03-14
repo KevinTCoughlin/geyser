@@ -25,11 +25,15 @@
 
 package org.geysermc.geyser.translator.protocol.java.entity;
 
+import net.kyori.adventure.key.Key;
 import org.geysermc.mcprotocollib.protocol.packet.ingame.clientbound.entity.ClientboundDamageEventPacket;
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityEventType;
 import org.cloudburstmc.protocol.bedrock.packet.EntityEventPacket;
+import org.cloudburstmc.protocol.bedrock.packet.PlaySoundPacket;
 import org.geysermc.geyser.entity.type.Entity;
 import org.geysermc.geyser.session.GeyserSession;
+import org.geysermc.geyser.session.cache.registry.JavaRegistries;
+import org.geysermc.geyser.session.cache.registry.RegistryEntryData;
 import org.geysermc.geyser.translator.protocol.PacketTranslator;
 import org.geysermc.geyser.translator.protocol.Translator;
 
@@ -43,7 +47,36 @@ public class JavaDamageEventTranslator extends PacketTranslator<ClientboundDamag
             return;
         }
 
-        // We can probably actually map damage types.
+        // Resolve the damage type key from the session's damage_type registry.
+        // The sourceTypeId is the network index into the registry sent during configuration.
+        Key damageTypeKey = session.getRegistryCache().registry(JavaRegistries.DAMAGE_TYPE)
+                .entryById(packet.getSourceTypeId())
+                .map(RegistryEntryData::key)
+                .orElse(null);
+
+        // Play a specific hurt sound for damage types that Bedrock does not handle automatically.
+        if (damageTypeKey != null) {
+            String sound = switch (damageTypeKey.value()) {
+                // Fire/heat damage → burn sound
+                case "hot_floor", "in_fire", "on_fire", "lava", "campfire" -> "game.player.hurt.on_fire";
+                // Freeze damage → freeze sound
+                case "freeze" -> "game.player.hurt.freeze";
+                // Drowning damage → drown sound
+                case "drown" -> "game.player.hurt.drown";
+                default -> null;
+            };
+
+            if (sound != null) {
+                PlaySoundPacket soundPacket = new PlaySoundPacket();
+                soundPacket.setPosition(entity.getPosition());
+                soundPacket.setSound(sound);
+                soundPacket.setVolume(1.0f);
+                soundPacket.setPitch(1.0f);
+                session.sendUpstreamPacket(soundPacket);
+            }
+        }
+
+        // Always send the HURT entity event for the red damage flash animation.
         EntityEventPacket entityEventPacket = new EntityEventPacket();
         entityEventPacket.setRuntimeEntityId(entity.geyserId());
         entityEventPacket.setType(EntityEventType.HURT);
