@@ -57,8 +57,9 @@ public class JavaDamageEventTranslator extends PacketTranslator<ClientboundDamag
         // Play a specific hurt sound for damage types that Bedrock does not handle automatically.
         if (damageTypeKey != null) {
             String sound = switch (damageTypeKey.value()) {
-                // Fire/heat damage → burn sound
-                case "hot_floor", "in_fire", "on_fire", "lava", "campfire" -> "game.player.hurt.on_fire";
+                // Fire/heat damage → burn sound (#minecraft:is_fire tag)
+                case "hot_floor", "in_fire", "on_fire", "lava", "campfire",
+                     "fireball", "unattributed_fireball" -> "game.player.hurt.on_fire";
                 // Freeze damage → freeze sound
                 case "freeze" -> "game.player.hurt.freeze";
                 // Drowning damage → drown sound
